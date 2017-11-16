@@ -62,11 +62,8 @@ var options = {
   reconnectPeriod: 1000
 };
 
-var publish1 = async packet => {
-   
-  }
-
-  function publish (packet){
+//Send the data to the IOTA 
+function publish (packet){
     var trytes = iotajs.utils.toTrytes(JSON.stringify(packet))
     var message = mam.create(state, trytes)
     state = message.state
