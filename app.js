@@ -4,6 +4,8 @@ var IOTA = require('iota.lib.js');
 
 var async = require("async");
 
+var mam = require("./mam.client.js/lib/mam.node");
+
 var nodeCleanup = require('node-cleanup');
 
 // Setup cleanup procedure
@@ -48,6 +50,9 @@ var mqtt_url = URL.parse(MQTT_FULL_URL);
 var auth = (mqtt_url.auth || ':').split(':');
 var url = mqtt_url.protocol + "//" + mqtt_url.host;
 
+//set up mam
+var state = mam.init(iotajs);
+
 // Setup MQTT broker connection options
 var options = {
   port: mqtt_url.port,
@@ -56,6 +61,18 @@ var options = {
   password: auth[1],
   reconnectPeriod: 1000
 };
+
+var publish1 = async packet => {
+   
+  }
+
+  function publish (packet){
+    var trytes = iotajs.utils.toTrytes(JSON.stringify(packet))
+    var message = mam.create(state, trytes)
+    state = message.state
+    mam.attach(message.payload, message.address)
+    return message.root
+  }
 
 // Connect to MQTT broker
 var client = mqtt.connect(url, options);
@@ -126,20 +143,15 @@ var txQueue = async.queue(function(task, done) {
         'message': iotajs.utils.toTrytes(task.message),
         'tag': iotajs.utils.toTrytes(IOTA_TAG)
     }];
+
     var seed = IOTA_SEED;
     var depth = 9;
     var minWeightMagnitude = 18;
-
-    iotajs.api.sendTransfer(seed, depth, minWeightMagnitude, transfers, function(error,success) {
-        if (!error) {
-            // Only one transfer so we can get the new TX hash by accessing .hash on first element of success.
-            console.log("Successfully made transfer for task " + task.id +', with transaction ID: "' + success[0].hash + '".');
-        } else {
-            console.log("Failed to make transfer for task " + task.id +', with error: ' + error);
-        }
-        done();
-    });
+    var root = publish(task.message)
+    console.log("processed : "+ root)
 }, 1);
 txQueue.drain = function() {
     console.log('All tasks have been processed... waiting for more.');
 };
+
+
